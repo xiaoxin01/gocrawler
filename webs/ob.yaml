@@ -1,0 +1,44 @@
+ob:
+    url:
+    listSelector: "#torrenttable > tbody > tr"
+    fields:
+      title:
+        operator: Text
+        selector: td:nth-child(2) > table > tbody > tr > td:nth-child(1) > a
+      link:
+        operator: Attr
+        parameter: href
+        selector: td:nth-child(2) > table > tbody > tr > td:nth-child(1) > a
+      types:
+        operator: Attrs
+        parameter: title
+        selector: td:nth-child(1) > a > img
+      description:
+        operator: Text
+        selector: td:nth-child(1)
+      imdb_id:
+        operator: Attr
+        parameter: data-imdbid
+        selector: label.imdb_rate
+      douban_id:
+        operator: Attr
+        parameter: data-doubanid
+        selector: label.douban_rate
+      created:
+        operator: Attr
+        parameter: title
+        selector: td:nth-child(4) > span
+      size:
+        operator: Text
+        selector: td:nth-child(5)
+    headers:
+      Host:
+      Connection: keep-alive
+      Cache-Control: max-age=0
+      Upgrade-Insecure-Requests: 1
+      User-Agent:
+      Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
+      Referer:
+      Accept-Encoding: gzip, deflate
+      Accept-Language: zh-CN,zh;q=0.9
+      Cookie:
