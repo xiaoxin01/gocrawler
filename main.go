@@ -3,6 +3,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"math/rand"
+	"os"
+	"regexp"
+	"time"
 
 	"github.com/gocolly/colly"
 	"github.com/spf13/viper"
@@ -12,9 +17,11 @@ import (
 type Web struct {
 	URL          string
 	ListSelector string
-	minFields    int
+	MinFields    int
+	PageCursor   *PageCursor
 	Fields       map[string]Field
 	Headers      map[string]string
+	Visited      map[string]bool
 }
 
 // Field field to add to each item
@@ -22,9 +29,24 @@ type Field struct {
 	Operator  string
 	Parameter string
 	Selector  string
+	Regexp    *RegexOperation
+}
+
+// PageCursor visit page by identity
+type PageCursor struct {
+	URLFormat string
+	Start     int
+	End       int
+}
+
+// RegexOperation regexp to change field value
+type RegexOperation struct {
+	Expression string
+	Group      int
 }
 
 func main() {
+	rand.Seed(time.Now().UnixNano())
 	viper.AddConfigPath(".")
 	viper.SetConfigName("webs")
 	viper.SetConfigType("yaml")
@@ -39,6 +61,19 @@ func main() {
 
 		var web Web
 		if err := viper.UnmarshalKey("webs."+path, &web); err != nil {
+			panic(err)
+		}
+
+		bytes, err := ioutil.ReadFile(fmt.Sprintf("data/%s.state", path))
+		web.Visited = make(map[string]bool)
+		if err == nil {
+			json.Unmarshal(bytes, &web.Visited)
+		}
+		os.Mkdir("data", os.ModeDir)
+		f, err := os.OpenFile("data/"+path+".json", os.O_APPEND|os.O_CREATE, os.ModeAppend)
+		defer f.Close()
+
+		if err != nil {
 			panic(err)
 		}
 
@@ -62,13 +97,16 @@ func main() {
 				}
 			}
 
-			if len(obj) < web.minFields {
+			if len(obj) < web.MinFields {
 				return
 			}
 
 			objString, _ := json.Marshal(obj)
 
-			fmt.Println(string(objString))
+			f.WriteString(string(objString))
+			f.WriteString("\n")
+
+			//fmt.Println(string(objString))
 		})
 
 		c.OnResponse(func(r *colly.Response) {
@@ -76,7 +114,28 @@ func main() {
 		})
 
 		// Start scraping on https://en.wikipedia.org
+		fmt.Println("visit url: ", web.URL)
+		web.Visited[web.URL] = true
 		c.Visit(web.URL)
+
+		if web.PageCursor != nil {
+			for start := web.PageCursor.Start; start <= web.PageCursor.End; start++ {
+				url := fmt.Sprintf(web.PageCursor.URLFormat, start)
+				if _, ok := web.Visited[url]; !ok {
+					time.Sleep(time.Second * time.Duration(rand.Intn(1)+1))
+					web.Visited[url] = true
+					fmt.Println("visit url: ", url)
+					c.Visit(url)
+				} else {
+					fmt.Println("skip url: ", url)
+				}
+			}
+		}
+		// viper.Set("webs."+path, &web)
+		// viper.WriteConfig()
+
+		file, _ := json.MarshalIndent(web.Visited, "", " ")
+		_ = ioutil.WriteFile(fmt.Sprintf("data/%s.state", path), file, 0644)
 	}
 }
 
@@ -93,8 +152,17 @@ func getValue(e *colly.HTMLElement, field Field) (v interface{}, ok bool) {
 		}
 	case "Text":
 		v = e.ChildText(field.Selector)
+	case "Const":
+		v = field.Parameter
 	default:
 		ok = false
+	}
+
+	if ok && field.Regexp != nil {
+		values := regexp.MustCompile(field.Regexp.Expression).FindStringSubmatch(v.(string))
+		if len(values) > field.Regexp.Group {
+			v = values[field.Regexp.Group]
+		}
 	}
 
 	ok = ok && v != ""
