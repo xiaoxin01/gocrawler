@@ -15,6 +15,7 @@ import (
 
 // Web web to crawl
 type Web struct {
+	Enabled      bool
 	URL          string
 	ListSelector string
 	MinFields    int
@@ -62,6 +63,9 @@ func main() {
 		var web Web
 		if err := viper.UnmarshalKey("webs."+path, &web); err != nil {
 			panic(err)
+		}
+		if !web.Enabled {
+			continue
 		}
 
 		bytes, err := ioutil.ReadFile(fmt.Sprintf("data/%s.state", path))
