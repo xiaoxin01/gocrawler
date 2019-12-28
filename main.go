@@ -73,8 +73,8 @@ func main() {
 		if err == nil {
 			json.Unmarshal(bytes, &web.Visited)
 		}
-		os.Mkdir("data", os.ModeDir)
-		f, err := os.OpenFile("data/"+path+".json", os.O_APPEND|os.O_CREATE, os.ModeAppend)
+		os.Mkdir("data", 0744)
+		f, err := os.OpenFile(fmt.Sprintf("data/%s.json", path), os.O_RDWR|os.O_APPEND|os.O_CREATE, 0644)
 		defer f.Close()
 
 		if err != nil {
