@@ -83,10 +83,12 @@ func main() {
 
 		// Instantiate default collector
 		c := colly.NewCollector()
+		c.SetRequestTimeout(time.Duration(time.Minute * 2))
 
 		// Before making a request put the URL with
 		// the key of "url" into the context of the request
 		c.OnRequest(func(r *colly.Request) {
+			r.Headers.Del("User-Agent")
 			for key, value := range web.Headers {
 				r.Headers.Add(key, value)
 			}
@@ -115,6 +117,11 @@ func main() {
 
 		c.OnResponse(func(r *colly.Response) {
 			//r.Body
+		})
+
+		c.OnError(func(r *colly.Response, err error) {
+			fmt.Println("visit url: ", r.Request.URL, "failed.", r, " error:", err)
+			web.Visited[r.Request.URL.RequestURI()] = false
 		})
 
 		// Start scraping on https://en.wikipedia.org
