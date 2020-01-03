@@ -31,6 +31,7 @@ type Field struct {
 	Parameter string
 	Selector  string
 	Regexp    *RegexOperation
+	Sprintf   *string
 }
 
 // PageCursor visit page by identity
@@ -121,7 +122,7 @@ func main() {
 
 		c.OnError(func(r *colly.Response, err error) {
 			fmt.Println("visit url: ", r.Request.URL, "failed.", r, " error:", err)
-			web.Visited[r.Request.URL.RequestURI()] = false
+			web.Visited[r.Request.URL.String()] = false
 		})
 
 		// Start scraping on https://en.wikipedia.org
@@ -174,6 +175,10 @@ func getValue(e *colly.HTMLElement, field Field) (v interface{}, ok bool) {
 		if len(values) > field.Regexp.Group {
 			v = values[field.Regexp.Group]
 		}
+	}
+
+	if ok && field.Sprintf != nil {
+		v = fmt.Sprintf(*field.Sprintf, v)
 	}
 
 	ok = ok && v != ""
