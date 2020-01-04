@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gocolly/colly"
+	"github.com/robfig/cron/v3"
 	"github.com/spf13/viper"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -31,11 +32,16 @@ type Web struct {
 	URL          string
 	ListSelector string
 	MinFields    int
+	Schedule     *string
 	PageCursor   *PageCursor
 	Fields       map[string]Field
 	Headers      map[string]string
 	Visited      map[string]bool
 }
+
+const (
+	defaultSchedule = "CRON_TZ=Asia/Shanghai * 18 * * *"
+)
 
 // Field field to add to each item
 type Field struct {
@@ -95,6 +101,8 @@ func main() {
 	fmt.Println("Connected to MongoDB!")
 	collection := client.Database(db.Database).Collection(db.Collection)
 
+	cronJobs := cron.New()
+
 	webs := viper.GetStringMap("webs")
 
 	for path := range webs {
@@ -107,91 +115,110 @@ func main() {
 			continue
 		}
 
-		bytes, err := ioutil.ReadFile(fmt.Sprintf("data/%s.state", path))
-		web.Visited = make(map[string]bool)
-		if err == nil {
-			json.Unmarshal(bytes, &web.Visited)
+		schedule := defaultSchedule
+		if web.Schedule != nil {
+			schedule = *web.Schedule
 		}
-		os.Mkdir("data", 0744)
-		f, err := os.OpenFile(fmt.Sprintf("data/%s.json", path), os.O_RDWR|os.O_APPEND|os.O_CREATE, 0644)
-		defer f.Close()
-
+		_, err := cronJobs.AddFunc(schedule, func() { crawlWeb(web, path, collection) })
 		if err != nil {
 			panic(err)
 		}
+	}
 
-		// Instantiate default collector
-		c := colly.NewCollector()
-		c.SetRequestTimeout(time.Duration(time.Minute * 2))
+	cronJobs.Start()
+	for {
+		for _, entity := range cronJobs.Entries() {
+			fmt.Printf("%d, next run: %v, last run: %v\n", entity.ID, entity.Next, entity.Prev)
+		}
+		time.Sleep(time.Hour)
+	}
+}
 
-		// Before making a request put the URL with
-		// the key of "url" into the context of the request
-		c.OnRequest(func(r *colly.Request) {
-			r.Headers.Del("User-Agent")
-			for key, value := range web.Headers {
-				r.Headers.Add(key, value)
-			}
-		})
+func crawlWeb(web Web, path string, collection *mongo.Collection) {
+	bytes, err := ioutil.ReadFile(fmt.Sprintf("data/%s.state", path))
+	web.Visited = make(map[string]bool)
+	if err == nil {
+		json.Unmarshal(bytes, &web.Visited)
+	}
+	os.Mkdir("data", 0744)
+	f, err := os.OpenFile(fmt.Sprintf("data/%s.json", path), os.O_RDWR|os.O_APPEND|os.O_CREATE, 0644)
+	defer f.Close()
 
-		c.OnHTML(web.ListSelector, func(e *colly.HTMLElement) {
-			obj := make(map[string]interface{}, 0)
+	if err != nil {
+		panic(err)
+	}
 
-			for key, field := range web.Fields {
-				if value, ok := getValue(e, field); ok {
-					obj[key] = value
-				}
-			}
+	// Instantiate default collector
+	c := colly.NewCollector()
+	c.SetRequestTimeout(time.Duration(time.Minute * 2))
 
-			if len(obj) < web.MinFields {
-				return
-			}
+	// Before making a request put the URL with
+	// the key of "url" into the context of the request
+	c.OnRequest(func(r *colly.Request) {
+		r.Headers.Del("User-Agent")
+		for key, value := range web.Headers {
+			r.Headers.Add(key, value)
+		}
+	})
 
-			objString, _ := json.Marshal(obj)
+	c.OnHTML(web.ListSelector, func(e *colly.HTMLElement) {
+		obj := make(map[string]interface{}, 0)
 
-			f.WriteString(string(objString))
-			f.WriteString("\n")
-
-			_, err := collection.UpdateOne(context.TODO(), bson.M{"_id": obj["_id"]}, bson.M{"$set": obj}, options.Update().SetUpsert(true))
-
-			if err != nil {
-				panic(fmt.Errorf("%v", err))
-			}
-			//fmt.Println(string(objString))
-		})
-
-		c.OnResponse(func(r *colly.Response) {
-			//r.Body
-		})
-
-		c.OnError(func(r *colly.Response, err error) {
-			fmt.Println("visit url: ", r.Request.URL, "failed.", r, " error:", err)
-			web.Visited[r.Request.URL.String()] = false
-		})
-
-		// Start scraping on https://en.wikipedia.org
-		fmt.Println("visit url: ", web.URL)
-		web.Visited[web.URL] = true
-		c.Visit(web.URL)
-
-		if web.PageCursor != nil {
-			for start := web.PageCursor.Start; start <= web.PageCursor.End; start++ {
-				url := fmt.Sprintf(web.PageCursor.URLFormat, start)
-				if _, ok := web.Visited[url]; !ok {
-					time.Sleep(time.Second * time.Duration(rand.Intn(1)+1))
-					web.Visited[url] = true
-					fmt.Println("visit url: ", url)
-					c.Visit(url)
-				} else {
-					fmt.Println("skip url: ", url)
-				}
+		for key, field := range web.Fields {
+			if value, ok := getValue(e, field); ok {
+				obj[key] = value
 			}
 		}
-		// viper.Set("webs."+path, &web)
-		// viper.WriteConfig()
 
-		file, _ := json.MarshalIndent(web.Visited, "", " ")
-		_ = ioutil.WriteFile(fmt.Sprintf("data/%s.state", path), file, 0644)
+		if len(obj) < web.MinFields {
+			return
+		}
+
+		objString, _ := json.Marshal(obj)
+
+		f.WriteString(string(objString))
+		f.WriteString("\n")
+
+		_, err := collection.UpdateOne(context.TODO(), bson.M{"_id": obj["_id"]}, bson.M{"$set": obj}, options.Update().SetUpsert(true))
+
+		if err != nil {
+			panic(fmt.Errorf("%v", err))
+		}
+		//fmt.Println(string(objString))
+	})
+
+	c.OnResponse(func(r *colly.Response) {
+		//r.Body
+	})
+
+	c.OnError(func(r *colly.Response, err error) {
+		fmt.Println("visit url: ", r.Request.URL, "failed.", r, " error:", err)
+		web.Visited[r.Request.URL.String()] = false
+	})
+
+	// Start scraping on https://en.wikipedia.org
+	fmt.Println("visit url: ", web.URL)
+	web.Visited[web.URL] = true
+	c.Visit(web.URL)
+
+	if web.PageCursor != nil {
+		for start := web.PageCursor.Start; start <= web.PageCursor.End; start++ {
+			url := fmt.Sprintf(web.PageCursor.URLFormat, start)
+			if _, ok := web.Visited[url]; !ok {
+				time.Sleep(time.Second * time.Duration(rand.Intn(1)+1))
+				web.Visited[url] = true
+				fmt.Println("visit url: ", url)
+				c.Visit(url)
+			} else {
+				fmt.Println("skip url: ", url)
+			}
+		}
 	}
+	// viper.Set("webs."+path, &web)
+	// viper.WriteConfig()
+
+	file, _ := json.MarshalIndent(web.Visited, "", " ")
+	_ = ioutil.WriteFile(fmt.Sprintf("data/%s.state", path), file, 0644)
 }
 
 func getValue(e *colly.HTMLElement, field Field) (v interface{}, ok bool) {

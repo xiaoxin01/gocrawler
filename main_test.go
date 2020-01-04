@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/magiconair/properties/assert"
+	"github.com/robfig/cron/v3"
 	"github.com/spf13/viper"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -60,4 +61,20 @@ func TestMongoDb(t *testing.T) {
 	err = collection.FindOne(context.TODO(), bson.M{"_id": "asbsdf"}).Decode(&objFind)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, id, objFind["id"].(int64))
+}
+
+func TestCronjob(t *testing.T) {
+	c := cron.New()
+	id, err := c.AddFunc("CRON_TZ=Asia/Shanghai 1 * * * *", func() { fmt.Println("Every hour on the half hour") })
+	assert.Equal(t, nil, err)
+
+	c.Start()
+	entry := c.Entry(id)
+	now := time.Now()
+	//shanghaiLocation, _ := time.LoadLocation("Asia/Shanghai")
+	targetTime := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 1, 0, 0, time.Local)
+	if targetTime.Before(now) {
+		targetTime = targetTime.Add(time.Hour)
+	}
+	assert.Equal(t, targetTime, entry.Next)
 }

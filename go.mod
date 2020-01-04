@@ -16,6 +16,7 @@ require (
 	github.com/golang/snappy v0.0.1 // indirect
 	github.com/kennygrant/sanitize v1.2.4 // indirect
 	github.com/magiconair/properties v1.8.1
+	github.com/robfig/cron/v3 v3.0.0
 	github.com/saintfish/chardet v0.0.0-20120816061221-3af4cd4741ca // indirect
 	github.com/spf13/viper v1.6.1
 	github.com/temoto/robotstxt v1.1.1 // indirect
