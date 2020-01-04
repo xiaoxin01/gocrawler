@@ -1,22 +1,36 @@
 # Dockerfile References: https://docs.docker.com/engine/reference/builder/
 # Start from the latest golang base image
 FROM golang:1.13.5 as builder
+
 # Add Maintainer Info
 LABEL maintainer="Jinxin Chen <xin3222634@163.com>"
+
 # Set the Current Working Directory inside the container
 WORKDIR /app
+
 # Copy go mod and sum files
 COPY go.mod go.sum ./
+
 # Download all dependencies. Dependencies will be cached if the go.mod and go.sum files are not changed
 RUN go mod download
+
 # Copy the source from the current directory to the Working Directory inside the container
 COPY . .
+
 # Build the Go app
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
+
 ######## Start a new stage from scratch #######
 FROM alpine:3.10.3
+
 # RUN apk --no-cache add ca-certificates
+RUN  echo 'http://mirrors.ustc.edu.cn/alpine/v3.5/main' > /etc/apk/repositories \
+    && echo 'http://mirrors.ustc.edu.cn/alpine/v3.5/community' >>/etc/apk/repositories \
+    && apk update && apk add tzdata \
+    && ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
+    && echo "Asia/Shanghai" > /etc/timezone
 WORKDIR /root/
+
 # Copy the Pre-built binary file from the previous stage
 COPY --from=builder /app/main .
 COPY --from=builder /app/webs.yaml .
