@@ -28,6 +28,7 @@ type Db struct {
 
 // Web web to crawl
 type Web struct {
+	Name         string
 	Enabled      bool
 	URL          string
 	ListSelector string
@@ -108,7 +109,6 @@ func main() {
 	webs := viper.GetStringMap("webs")
 
 	for path := range webs {
-
 		var web Web
 		if err := viper.UnmarshalKey("webs."+path, &web); err != nil {
 			panic(err)
@@ -121,7 +121,7 @@ func main() {
 		if web.Schedule != nil {
 			schedule = *web.Schedule
 		}
-		_, err := cronJobs.AddFunc(schedule, func() { crawlWeb(web, path, collection) })
+		_, err := cronJobs.AddFunc(schedule, func() { crawlWeb(web, collection) })
 		if err != nil {
 			panic(err)
 		}
@@ -136,11 +136,11 @@ func main() {
 	}
 }
 
-func crawlWeb(web Web, path string, collection *mongo.Collection) {
-	fmt.Printf("start: %s\n", path)
-	initialState(&web, path)
+func crawlWeb(web Web, collection *mongo.Collection) {
+	fmt.Printf("start: %s\n", web.Name)
+	initialState(&web)
 	os.Mkdir("data", 0744)
-	f, err := os.OpenFile(fmt.Sprintf("data/%s.json", path), os.O_RDWR|os.O_APPEND|os.O_CREATE, 0644)
+	f, err := os.OpenFile(fmt.Sprintf("data/%s.json", web.Name), os.O_RDWR|os.O_APPEND|os.O_CREATE, 0644)
 	defer f.Close()
 
 	if err != nil {
@@ -228,7 +228,7 @@ func crawlWeb(web Web, path string, collection *mongo.Collection) {
 	// viper.Set("webs."+path, &web)
 	// viper.WriteConfig()
 
-	saveState(&web, path)
+	saveState(&web)
 }
 
 func getValue(e *colly.HTMLElement, field Field) (v interface{}, ok bool) {
@@ -266,28 +266,28 @@ func getValue(e *colly.HTMLElement, field Field) (v interface{}, ok bool) {
 	return
 }
 
-func initialState(web *Web, path string) {
+func initialState(web *Web) {
 	// initial page visit
-	bytes, err := ioutil.ReadFile(fmt.Sprintf("data/%s.state", path))
+	bytes, err := ioutil.ReadFile(fmt.Sprintf("data/%s.state", web.Name))
 	web.Visited = make(map[string]bool)
 	if err == nil {
 		json.Unmarshal(bytes, &web.Visited)
 	}
 
 	// initial item visit
-	bytes, err = ioutil.ReadFile(fmt.Sprintf("data/%s.items", path))
+	bytes, err = ioutil.ReadFile(fmt.Sprintf("data/%s.items", web.Name))
 	web.VisitedItems = make(map[string]bool)
 	if err == nil {
 		json.Unmarshal(bytes, &web.VisitedItems)
 	}
 }
 
-func saveState(web *Web, path string) {
+func saveState(web *Web) {
 	// save page visit
 	file, _ := json.MarshalIndent(web.Visited, "", " ")
-	_ = ioutil.WriteFile(fmt.Sprintf("data/%s.state", path), file, 0644)
+	_ = ioutil.WriteFile(fmt.Sprintf("data/%s.state", web.Name), file, 0644)
 
 	// save item visit
 	file, _ = json.MarshalIndent(web.VisitedItems, "", " ")
-	_ = ioutil.WriteFile(fmt.Sprintf("data/%s.items", path), file, 0644)
+	_ = ioutil.WriteFile(fmt.Sprintf("data/%s.items", web.Name), file, 0644)
 }

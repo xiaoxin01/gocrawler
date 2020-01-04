@@ -4,6 +4,7 @@ db:
   collection:
 webs:
   mt_s:
+    name: mts
     enabled: false
     url:
     listselector: '#form_torrent > table > tbody > tr'
@@ -13,6 +14,7 @@ webs:
       URLFormat:
       Start: 2
       End: 822
+    itemKey: _id
     fields:
       _id:
         operator: Attr
