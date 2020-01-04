@@ -2,3 +2,4 @@ webs.yaml
 data/
 bin/
 .vscode
+docker-compose.yaml
