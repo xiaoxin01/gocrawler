@@ -1,3 +1,7 @@
+db:
+  connection:
+  database:
+  collection:
 webs:
   mt_s:
     enabled: false
@@ -9,6 +13,14 @@ webs:
       Start: 2
       End: 822
     fields:
+      _id:
+        operator: Attr
+        parameter: href
+        selector: td.torrenttr > table > tbody > tr > td:nth-child(2) > a
+        regexp:
+          expression: id=(\d+)
+          group: 1
+        sprintf: mts_%s
       img_url:
         operator: Attr
         parameter: src
@@ -64,6 +76,14 @@ webs:
       Start: 2
       End: 725
     fields:
+      _id:
+        operator: Attr
+        parameter: href
+        selector: td.torrenttr > table > tbody > tr > td:nth-child(2) > a
+        regexp:
+          expression: id=(\d+)
+          group: 1
+        sprintf: mta_%s
       created:
         operator: Attr
         parameter: title

@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"math/rand"
 	"os"
 	"regexp"
@@ -11,7 +13,17 @@ import (
 
 	"github.com/gocolly/colly"
 	"github.com/spf13/viper"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
+
+// Db connection info
+type Db struct {
+	Connection string
+	Database   string
+	Collection string
+}
 
 // Web web to crawl
 type Web struct {
@@ -56,6 +68,32 @@ func main() {
 	if err != nil {             // Handle errors reading the config file
 		panic(fmt.Errorf("Fatal error config file: %s", err))
 	}
+
+	var db Db
+	err = viper.UnmarshalKey("db", &db)
+	if err != nil { // Handle errors reading the config file
+		panic(fmt.Errorf("read db config err"))
+	}
+
+	// Set client options
+	clientOptions := options.Client().ApplyURI(db.Connection)
+
+	// Connect to MongoDB
+	client, err := mongo.Connect(context.TODO(), clientOptions)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Check the connection
+	err = client.Ping(context.TODO(), nil)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println("Connected to MongoDB!")
+	collection := client.Database(db.Database).Collection(db.Collection)
 
 	webs := viper.GetStringMap("webs")
 
@@ -113,6 +151,11 @@ func main() {
 			f.WriteString(string(objString))
 			f.WriteString("\n")
 
+			_, err := collection.UpdateOne(context.TODO(), bson.M{"_id": obj["_id"]}, bson.M{"$set": obj}, options.Update().SetUpsert(true))
+
+			if err != nil {
+				panic(fmt.Errorf("%v", err))
+			}
 			//fmt.Println(string(objString))
 		})
 
