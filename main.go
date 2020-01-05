@@ -43,7 +43,9 @@ func main() {
 	fmt.Println("Connected to MongoDB!")
 	collection := client.Database(db.Database).Collection(db.Collection)
 
-	cronJobs := cron.New()
+	cronJobs := cron.New(cron.WithChain(
+		cron.SkipIfStillRunning(cron.DefaultLogger),
+	))
 
 	for _, web := range model.Webs {
 		if !web.Enabled {
