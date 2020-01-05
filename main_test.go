@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"gocrawler/model"
 	"math/rand"
 	"regexp"
 	"testing"
@@ -34,12 +35,8 @@ func TestMongoDb(t *testing.T) {
 	err := viper.ReadInConfig() // Find and read the config file
 	assert.Equal(t, nil, err)
 
-	var db Db
-	err = viper.UnmarshalKey("db", &db)
-	assert.Equal(t, nil, err)
-
 	// Set client options
-	clientOptions := options.Client().ApplyURI(db.Connection)
+	clientOptions := options.Client().ApplyURI(model.Db.Connection)
 
 	// Connect to MongoDB
 	client, err := mongo.Connect(context.TODO(), clientOptions)

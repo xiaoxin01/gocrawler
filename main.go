@@ -11,37 +11,15 @@ import (
 	"regexp"
 	"time"
 
+	"gocrawler/model"
+
 	"github.com/gocolly/colly"
 	"github.com/liuzl/gocc"
 	"github.com/robfig/cron/v3"
-	"github.com/spf13/viper"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
-
-// Db connection info
-type Db struct {
-	Connection string
-	Database   string
-	Collection string
-}
-
-// Web web to crawl
-type Web struct {
-	Name         string
-	Enabled      bool
-	URL          string
-	ListSelector string
-	MinFields    int
-	Schedule     *string
-	PageCursor   *PageCursor
-	ItemKey      *string
-	Fields       map[string]Field
-	Headers      map[string]string
-	Visited      map[string]bool
-	VisitedItems map[string]bool
-}
 
 const (
 	defaultSchedule = "CRON_TZ=Asia/Shanghai * 18 * * *"
@@ -51,29 +29,6 @@ var (
 	t2sService *gocc.OpenCC
 )
 
-// Field field to add to each item
-type Field struct {
-	Operator  string
-	Parameter string
-	Selector  string
-	Regexp    *RegexOperation
-	Sprintf   *string
-	Action    *string
-}
-
-// PageCursor visit page by identity
-type PageCursor struct {
-	URLFormat string
-	Start     int
-	End       int
-}
-
-// RegexOperation regexp to change field value
-type RegexOperation struct {
-	Expression string
-	Group      int
-}
-
 func init() {
 	*gocc.Dir = `./module/gocc`
 	t2sService, _ = gocc.New("t2s")
@@ -81,49 +36,16 @@ func init() {
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
-	viper.AddConfigPath(".")
-	viper.SetConfigName("webs")
-	viper.SetConfigType("yaml")
-	err := viper.ReadInConfig() // Find and read the config file
-	if err != nil {             // Handle errors reading the config file
-		panic(fmt.Errorf("Fatal error config file: %s", err))
-	}
 
-	var db Db
-	err = viper.UnmarshalKey("db", &db)
-	if err != nil { // Handle errors reading the config file
-		panic(fmt.Errorf("read db config err"))
-	}
-
-	// Set client options
-	clientOptions := options.Client().ApplyURI(db.Connection)
-
-	// Connect to MongoDB
-	client, err := mongo.Connect(context.TODO(), clientOptions)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Check the connection
-	err = client.Ping(context.TODO(), nil)
-
-	if err != nil {
-		log.Fatal(err)
-	}
+	client := model.Client
+	db := model.Db
 
 	fmt.Println("Connected to MongoDB!")
 	collection := client.Database(db.Database).Collection(db.Collection)
 
 	cronJobs := cron.New()
 
-	webs := viper.GetStringMap("webs")
-
-	for path := range webs {
-		var web Web
-		if err := viper.UnmarshalKey("webs."+path, &web); err != nil {
-			panic(err)
-		}
+	for _, web := range model.Webs {
 		if !web.Enabled {
 			continue
 		}
@@ -132,7 +54,8 @@ func main() {
 		if web.Schedule != nil {
 			schedule = *web.Schedule
 		}
-		_, err := cronJobs.AddFunc(schedule, func() { crawlWeb(web, collection) })
+		realWeb := web
+		_, err := cronJobs.AddFunc(schedule, func() { crawlWeb(realWeb, collection) })
 		if err != nil {
 			panic(err)
 		}
@@ -147,7 +70,7 @@ func main() {
 	}
 }
 
-func crawlWeb(web Web, collection *mongo.Collection) {
+func crawlWeb(web model.Web, collection *mongo.Collection) {
 	fmt.Printf("start: %s\n", web.Name)
 	initialState(&web)
 	os.Mkdir("data", 0744)
@@ -241,7 +164,7 @@ func crawlWeb(web Web, collection *mongo.Collection) {
 	saveState(&web)
 }
 
-func getValue(e *colly.HTMLElement, field Field) (v interface{}, ok bool) {
+func getValue(e *colly.HTMLElement, field model.Field) (v interface{}, ok bool) {
 	ok = true
 	switch field.Operator {
 	case "Attr":
@@ -287,7 +210,7 @@ func getValue(e *colly.HTMLElement, field Field) (v interface{}, ok bool) {
 	return
 }
 
-func initialState(web *Web) {
+func initialState(web *model.Web) {
 	// initial page visit
 	bytes, err := ioutil.ReadFile(fmt.Sprintf("data/%s.state", web.Name))
 	web.Visited = make(map[string]bool)
@@ -303,7 +226,7 @@ func initialState(web *Web) {
 	}
 }
 
-func saveState(web *Web) {
+func saveState(web *model.Web) {
 	// save page visit
 	file, _ := json.MarshalIndent(web.Visited, "", " ")
 	_ = ioutil.WriteFile(fmt.Sprintf("data/%s.state", web.Name), file, 0644)
