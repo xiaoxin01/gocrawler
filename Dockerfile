@@ -29,7 +29,7 @@ RUN  echo 'http://mirrors.ustc.edu.cn/alpine/v3.5/main' > /etc/apk/repositories 
     && apk update && apk add tzdata \
     && ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
     && echo "Asia/Shanghai" > /etc/timezone \
-    && apk del tzdata \
+    #    && apk del tzdata \
     && rm -rf /var/cache/apk/*
 WORKDIR /root/
 
