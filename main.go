@@ -277,6 +277,13 @@ func getValue(e *colly.HTMLElement, field Field) (v interface{}, ok bool) {
 
 	ok = ok && v != ""
 
+	defer func() {
+		err := recover()
+		if err != nil {
+			log.Print(err)
+		}
+	}()
+
 	return
 }
 

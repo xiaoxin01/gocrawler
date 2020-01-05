@@ -34,8 +34,8 @@ RUN  echo 'http://mirrors.ustc.edu.cn/alpine/v3.5/main' > /etc/apk/repositories 
 WORKDIR /root/
 
 # Copy the Pre-built binary file from the previous stage
-COPY --from=builder /app/main .
-COPY webs.yaml module ./
+COPY --from=builder /app/main /app/webs.yaml ./
+COPY ./module ./module
 # # Expose port 8080 to the outside world
 # EXPOSE 8080
 # Command to run the executable
