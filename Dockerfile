@@ -35,7 +35,7 @@ WORKDIR /root/
 
 # Copy the Pre-built binary file from the previous stage
 COPY --from=builder /app/main .
-COPY --from=builder /app/webs.yaml .
+COPY webs.yaml module ./
 # # Expose port 8080 to the outside world
 # EXPOSE 8080
 # Command to run the executable

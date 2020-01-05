@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/liuzl/gocc"
 	"github.com/magiconair/properties/assert"
 	"github.com/robfig/cron/v3"
 	"github.com/spf13/viper"
@@ -77,4 +78,14 @@ func TestCronjob(t *testing.T) {
 		targetTime = targetTime.Add(time.Hour)
 	}
 	assert.Equal(t, targetTime, entry.Next)
+}
+
+func TestT2s(t *testing.T) {
+	*gocc.Dir = `./module/gocc`
+	t2s, err := gocc.New("t2s")
+	assert.Equal(t, err, nil)
+
+	got, err := t2s.Convert("自然語言處理是人工智能領域中的一個重要方向")
+	assert.Equal(t, err, nil)
+	assert.Equal(t, got, "自然语言处理是人工智能领域中的一个重要方向")
 }

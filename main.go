@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gocolly/colly"
+	"github.com/liuzl/gocc"
 	"github.com/robfig/cron/v3"
 	"github.com/spf13/viper"
 	"go.mongodb.org/mongo-driver/bson"
@@ -46,6 +47,10 @@ const (
 	defaultSchedule = "CRON_TZ=Asia/Shanghai * 18 * * *"
 )
 
+var (
+	t2sService *gocc.OpenCC
+)
+
 // Field field to add to each item
 type Field struct {
 	Operator  string
@@ -53,6 +58,7 @@ type Field struct {
 	Selector  string
 	Regexp    *RegexOperation
 	Sprintf   *string
+	Action    *string
 }
 
 // PageCursor visit page by identity
@@ -66,6 +72,11 @@ type PageCursor struct {
 type RegexOperation struct {
 	Expression string
 	Group      int
+}
+
+func init() {
+	*gocc.Dir = `./module/gocc`
+	t2sService, _ = gocc.New("t2s")
 }
 
 func main() {
@@ -179,9 +190,8 @@ func crawlWeb(web Web, collection *mongo.Collection) {
 				if _, ok := web.VisitedItems[fmt.Sprintf("%v", key)]; ok {
 					// item visited, skip
 					return
-				} else {
-					web.VisitedItems[fmt.Sprintf("%v", key)] = true
 				}
+				web.VisitedItems[fmt.Sprintf("%v", key)] = true
 			}
 		}
 
@@ -259,6 +269,10 @@ func getValue(e *colly.HTMLElement, field Field) (v interface{}, ok bool) {
 
 	if ok && field.Sprintf != nil {
 		v = fmt.Sprintf(*field.Sprintf, v)
+	}
+
+	if ok && field.Action != nil && *field.Action == "t2s" {
+		v, _ = t2sService.Convert(fmt.Sprintf("%v", v))
 	}
 
 	ok = ok && v != ""
