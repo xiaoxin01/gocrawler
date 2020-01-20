@@ -13,7 +13,8 @@ var (
 	Client *mongo.Client
 )
 
-func init() {
+// InitDb initial db
+func InitDb() {
 	db := Db
 
 	// Set client options

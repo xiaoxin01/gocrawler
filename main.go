@@ -5,10 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"math/rand"
 	"os"
-	"regexp"
 	"time"
 
 	"gocrawler/model"
@@ -25,13 +23,10 @@ const (
 	defaultSchedule = "CRON_TZ=Asia/Shanghai * 18 * * *"
 )
 
-var (
-	t2sService *gocc.OpenCC
-)
-
 func init() {
 	*gocc.Dir = `./module/gocc`
-	t2sService, _ = gocc.New("t2s")
+	model.InitConfig()
+	model.InitDb()
 }
 
 func main() {
@@ -100,7 +95,7 @@ func crawlWeb(web model.Web, collection *mongo.Collection) {
 		obj := make(map[string]interface{}, 0)
 
 		for key, field := range web.Fields {
-			if value, ok := getValue(e, field); ok {
+			if value, ok := field.GetValue(e); ok {
 				obj[key] = value
 			}
 		}
@@ -164,52 +159,6 @@ func crawlWeb(web model.Web, collection *mongo.Collection) {
 	// viper.WriteConfig()
 
 	saveState(&web)
-}
-
-func getValue(e *colly.HTMLElement, field model.Field) (v interface{}, ok bool) {
-	ok = true
-	switch field.Operator {
-	case "Attr":
-		v = e.ChildAttr(field.Selector, field.Parameter)
-	case "Attrs":
-		if attr := e.ChildAttrs(field.Selector, field.Parameter); attr != nil {
-			v = attr
-		} else {
-			ok = false
-		}
-	case "Text":
-		v = e.ChildText(field.Selector)
-	case "Const":
-		v = field.Parameter
-	default:
-		ok = false
-	}
-
-	if ok && field.Regexp != nil {
-		values := regexp.MustCompile(field.Regexp.Expression).FindStringSubmatch(v.(string))
-		if len(values) > field.Regexp.Group {
-			v = values[field.Regexp.Group]
-		}
-	}
-
-	if ok && field.Sprintf != nil {
-		v = fmt.Sprintf(*field.Sprintf, v)
-	}
-
-	if ok && field.Action != nil && *field.Action == "t2s" {
-		v, _ = t2sService.Convert(fmt.Sprintf("%v", v))
-	}
-
-	ok = ok && v != ""
-
-	defer func() {
-		err := recover()
-		if err != nil {
-			log.Print(err)
-		}
-	}()
-
-	return
 }
 
 func initialState(web *model.Web) {

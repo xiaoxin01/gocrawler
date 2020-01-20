@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/liuzl/gocc"
-	"github.com/magiconair/properties/assert"
 	"github.com/robfig/cron/v3"
 	"github.com/spf13/viper"
+	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"

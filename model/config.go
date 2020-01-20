@@ -18,7 +18,8 @@ type DbConnection struct {
 	Collection string
 }
 
-func init() {
+// InitConfig initial config
+func InitConfig() {
 	viper.AddConfigPath(".")
 	viper.SetConfigName("webs")
 	viper.SetConfigType("yaml")

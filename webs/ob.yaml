@@ -3,6 +3,25 @@ db:
   database:
   collection:
 webs:
+  hot_search:
+    name: hotsearch
+    enabled: true
+    url:
+    listselector: '#outer > table > tbody > tr > td > form > table > tbody:nth-child(3) > tr > td:nth-child(1) > table > tbody > tr:nth-child(2) > td > a'
+    minfields: 2
+    schedule: "CRON_TZ=Asia/Shanghai 15 */4 * * *"
+    itemKey: _id
+    fields:
+      _id:
+        operator: Text
+        selector: u
+      source:
+        operator: Const
+        parameter: hds
+      created:
+        operator: Func
+        parameter: time.Now().Unix()
+
   mt_s:
     name: mts
     enabled: false
