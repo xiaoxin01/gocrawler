@@ -11,6 +11,7 @@ webs:
     minfields: 2
     schedule: "CRON_TZ=Asia/Shanghai 15 */4 * * *"
     itemKey: _id
+    collection:
     fields:
       _id:
         operator: Text

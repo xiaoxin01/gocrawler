@@ -36,7 +36,6 @@ func main() {
 	db := model.Db
 
 	fmt.Println("Connected to MongoDB!")
-	collection := client.Database(db.Database).Collection(db.Collection)
 
 	cronJobs := cron.New(cron.WithChain(
 		cron.SkipIfStillRunning(cron.DefaultLogger),
@@ -52,6 +51,11 @@ func main() {
 			schedule = *web.Schedule
 		}
 		realWeb := web
+		collectionName := db.Collection
+		if realWeb.Collection != nil {
+			collectionName = *realWeb.Collection
+		}
+		collection := client.Database(db.Database).Collection(collectionName)
 		_, err := cronJobs.AddFunc(schedule, func() { crawlWeb(realWeb, collection) })
 		if err != nil {
 			panic(err)
@@ -133,7 +137,7 @@ func crawlWeb(web model.Web, collection *mongo.Collection) {
 	})
 
 	c.OnError(func(r *colly.Response, err error) {
-		fmt.Println("visit url: ", r.Request.URL, "failed.", r, " error:", err)
+		fmt.Println("visit url: ", r.Request.URL, "failed.", string(r.Body), " error:", err)
 		web.Visited[r.Request.URL.String()] = false
 	})
 

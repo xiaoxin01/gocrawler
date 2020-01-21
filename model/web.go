@@ -10,6 +10,7 @@ type Web struct {
 	Schedule     *string
 	PageCursor   *PageCursor
 	ItemKey      *string
+	Collection   *string
 	Fields       map[string]Field
 	Headers      map[string]string
 	Visited      map[string]bool
