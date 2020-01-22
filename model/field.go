@@ -31,7 +31,12 @@ type RegexOperation struct {
 }
 
 func init() {
-	t2sService, _ = gocc.New("t2s")
+	var err error
+	*gocc.Dir = `./module/gocc`
+	t2sService, err = gocc.New("t2s")
+	if err != nil {
+		panic(err)
+	}
 }
 
 // GetValue get field value
@@ -67,7 +72,7 @@ func (field Field) GetValue(e *colly.HTMLElement) (v interface{}, ok bool) {
 		v = fmt.Sprintf(*field.Sprintf, v)
 	}
 
-	if ok && field.Action != nil && *field.Action == "t2s" {
+	if ok && field.Action != nil && *field.Action == "t2s" && v != "" {
 		v, _ = t2sService.Convert(fmt.Sprintf("%v", v))
 	}
 

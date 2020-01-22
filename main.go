@@ -12,7 +12,6 @@ import (
 	"gocrawler/model"
 
 	"github.com/gocolly/colly"
-	"github.com/liuzl/gocc"
 	"github.com/robfig/cron/v3"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -24,7 +23,6 @@ const (
 )
 
 func init() {
-	*gocc.Dir = `./module/gocc`
 	model.InitConfig()
 	model.InitDb()
 }
