@@ -7,8 +7,12 @@ import (
 )
 
 var (
+	// Webs webs to crawl
 	Webs []Web
-	Db   DbConnection
+	// Db db connection info
+	Db DbConnection
+	// AlertKey alert key to send alert, http://sc.ftqq.com/
+	AlertKey string
 )
 
 // DbConnection connection info
@@ -19,8 +23,8 @@ type DbConnection struct {
 }
 
 // InitConfig initial config
-func InitConfig() {
-	viper.AddConfigPath(".")
+func InitConfig(configPath string) {
+	viper.AddConfigPath(configPath)
 	viper.SetConfigName("webs")
 	viper.SetConfigType("yaml")
 	err := viper.ReadInConfig() // Find and read the config file
@@ -41,4 +45,6 @@ func InitConfig() {
 	if err != nil { // Handle errors reading the config file
 		panic(fmt.Errorf("read db config err"))
 	}
+
+	AlertKey = viper.GetString("alertKey")
 }

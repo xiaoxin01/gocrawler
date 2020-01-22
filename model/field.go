@@ -30,9 +30,13 @@ type RegexOperation struct {
 	Group      int
 }
 
-func init() {
+// InitField init field
+func InitField(gccPath string) {
 	var err error
 	*gocc.Dir = `./module/gocc`
+	if gccPath != "" {
+		*gocc.Dir = fmt.Sprintf("%s%s", gccPath, *gocc.Dir)
+	}
 	t2sService, err = gocc.New("t2s")
 	if err != nil {
 		panic(err)

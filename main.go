@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"gocrawler/model"
+	"gocrawler/service"
 
 	"github.com/gocolly/colly"
 	"github.com/robfig/cron/v3"
@@ -23,11 +24,19 @@ const (
 )
 
 func init() {
-	model.InitConfig()
+	model.InitConfig(".")
 	model.InitDb()
+	model.InitField("")
 }
 
 func main() {
+	defer func() {
+		err := recover()
+		if err != nil {
+			service.Alert("crawl failed!", fmt.Sprintf("%v", err))
+		}
+	}()
+
 	rand.Seed(time.Now().UnixNano())
 
 	client := model.Client
