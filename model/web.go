@@ -11,6 +11,7 @@ type Web struct {
 	PageCursor   *PageCursor
 	ItemKey      *string
 	Collection   *string
+	Subscribe    bool
 	Fields       map[string]Field
 	Headers      map[string]string
 	Visited      map[string]bool

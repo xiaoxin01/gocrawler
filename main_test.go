@@ -86,3 +86,18 @@ func TestT2s(t *testing.T) {
 	assert.Equal(t, err, nil)
 	assert.Equal(t, got, "自然语言处理是人工智能领域中的一个重要方向")
 }
+
+func TestGetSubscribes(t *testing.T) {
+	subscribes := getSubscribes()
+
+	assert.Equal(t, 1, len(subscribes))
+	assert.Equal(t, "测试", subscribes[0])
+}
+
+func TestCheckAndSendAlert(t *testing.T) {
+	alerted1 := checkAndSendAlert("测试")
+	alerted2 := checkAndSendAlert("test")
+
+	assert.Equal(t, true, alerted1)
+	assert.Equal(t, false, alerted2)
+}

@@ -10,7 +10,8 @@ import (
 
 var (
 	// Client client to mongo db
-	Client *mongo.Client
+	Client   *mongo.Client
+	Database *mongo.Database
 )
 
 // InitDb initial db
@@ -33,6 +34,8 @@ func InitDb() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	database := client.Database(db.Database)
 
 	Client = client
+	Database = database
 }

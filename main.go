@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"math/rand"
 	"os"
+	"strings"
 	"time"
 
 	"gocrawler/model"
@@ -39,7 +41,6 @@ func main() {
 
 	rand.Seed(time.Now().UnixNano())
 
-	client := model.Client
 	db := model.Db
 
 	fmt.Println("Connected to MongoDB!")
@@ -62,7 +63,7 @@ func main() {
 		if realWeb.Collection != nil {
 			collectionName = *realWeb.Collection
 		}
-		collection := client.Database(db.Database).Collection(collectionName)
+		collection := model.Database.Collection(collectionName)
 		_, err := cronJobs.AddFunc(schedule, func() { crawlWeb(realWeb, collection) })
 		if err != nil {
 			panic(err)
@@ -136,6 +137,10 @@ func crawlWeb(web model.Web, collection *mongo.Collection) {
 		if err != nil {
 			panic(fmt.Errorf("%v", err))
 		}
+
+		if web.Subscribe {
+			checkAndSendAlert(string(objString))
+		}
 		//fmt.Println(string(objString))
 	})
 
@@ -196,4 +201,47 @@ func saveState(web *model.Web) {
 	// save item visit
 	file, _ = json.MarshalIndent(web.VisitedItems, "", " ")
 	_ = ioutil.WriteFile(fmt.Sprintf("data/%s.items", web.Name), file, 0644)
+}
+
+func checkAndSendAlert(item string) bool {
+	defer func() {
+		err := recover()
+		if err != nil {
+			fmt.Println(err)
+		}
+	}()
+	var subscribes []string = getSubscribes()
+
+	for _, subscribe := range subscribes {
+		if strings.Contains(item, subscribe) {
+			service.Alert("subscribe new!", item)
+			return true
+		}
+	}
+
+	return false
+}
+
+func getSubscribes() []string {
+	var subscribes []string
+	collection := model.Database.Collection("subscribes")
+	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	cur, err := collection.Find(ctx, bson.D{})
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer cur.Close(ctx)
+	for cur.Next(ctx) {
+		var result bson.M
+		err := cur.Decode(&result)
+		if err != nil {
+			log.Fatal(err)
+		}
+		subscribes = append(subscribes, result["_id"].(string))
+	}
+	if err := cur.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+	return subscribes
 }
