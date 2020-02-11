@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"math/rand"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -93,6 +94,11 @@ func crawlWeb(web model.Web, collection *mongo.Collection) {
 	// Instantiate default collector
 	c := colly.NewCollector()
 	c.SetRequestTimeout(time.Duration(time.Minute * 2))
+	c.RedirectHandler = func(req *http.Request, via []*http.Request) error {
+		fmt.Println("redirect to: ", req.Response.Header["Location"])
+		service.Alert("redirect", strings.Join(req.Response.Header["Location"], " "))
+		return nil
+	}
 
 	// Before making a request put the URL with
 	// the key of "url" into the context of the request
@@ -145,7 +151,8 @@ func crawlWeb(web model.Web, collection *mongo.Collection) {
 	})
 
 	c.OnResponse(func(r *colly.Response) {
-		//r.Body
+		// r.Body
+		// fmt.Println("code: ", r.StatusCode)
 	})
 
 	c.OnError(func(r *colly.Response, err error) {
