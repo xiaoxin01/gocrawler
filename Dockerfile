@@ -5,6 +5,9 @@ FROM golang:1.13.5 as builder
 # Add Maintainer Info
 LABEL maintainer="Jinxin Chen <xin3222634@163.com>"
 
+# Go proxy for china
+ENV GOPROXY=https://goproxy.io
+
 # Set the Current Working Directory inside the container
 WORKDIR /app
 
