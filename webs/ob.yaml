@@ -285,10 +285,11 @@ webs:
     url:
     listselector: '#torrenttable > tbody > tr'
     minfields: 4
-    pagecursor:
-      URLFormat:
-      Start: 2
-      End: 337
+    schedule: "CRON_TZ=Asia/Shanghai 10 8-23,0-2 * * *"
+    # pagecursor:
+    #   URLFormat:
+    #   Start: 2
+    #   End: 337
     fields:
       created:
         operator: Attr
@@ -301,6 +302,14 @@ webs:
         operator: Attr
         parameter: data-doubanid
         selector: label.douban_rate
+      _id:
+        operator: Attr
+        parameter: href
+        selector: td:nth-child(2) > table > tbody > tr > td:nth-child(1) > a
+        regexp:
+          expression: id=(\d+)
+          group: 1
+        sprintf: ob_%s
       id:
         operator: Attr
         parameter: href
