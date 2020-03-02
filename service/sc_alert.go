@@ -5,17 +5,19 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
-
-	"gocrawler/model"
 )
 
-// Alert send alert to your device
-func Alert(title string, description string) bool {
+type scAlert struct {
+	Key string
+	URL string
+}
+
+// Alert send alert
+func (alert scAlert) Alert(title string, content string) bool {
 	success := true
-	url := fmt.Sprintf("https://sc.ftqq.com/%s.send", model.AlertKey)
-	resp, err := http.Post(url,
+	resp, err := http.Post(alert.URL,
 		"application/x-www-form-urlencoded",
-		strings.NewReader(fmt.Sprintf("text=%s&desp=%s", title, description)))
+		strings.NewReader(fmt.Sprintf("text=%s&desp=%s", title, content)))
 	if err != nil {
 		fmt.Println(err)
 		success = false

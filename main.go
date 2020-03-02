@@ -30,6 +30,7 @@ func init() {
 	model.InitConfig(".")
 	model.InitDb()
 	model.InitField("")
+	service.InitAlert(model.AlertType, model.AlertKey)
 }
 
 func main() {

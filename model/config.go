@@ -13,6 +13,8 @@ var (
 	Db DbConnection
 	// AlertKey alert key to send alert, http://sc.ftqq.com/
 	AlertKey string
+	// AlertType alert type
+	AlertType string
 )
 
 // DbConnection connection info
@@ -47,4 +49,5 @@ func InitConfig(configPath string) {
 	}
 
 	AlertKey = viper.GetString("alertKey")
+	AlertType = viper.GetString("alertType")
 }
