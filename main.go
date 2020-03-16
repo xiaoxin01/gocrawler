@@ -97,7 +97,7 @@ func crawlWeb(web model.Web, collection *mongo.Collection) {
 	c.SetRequestTimeout(time.Duration(time.Minute * 2))
 	c.RedirectHandler = func(req *http.Request, via []*http.Request) error {
 		fmt.Println("redirect to: ", req.Response.Header["Location"])
-		service.Alert("redirect", strings.Join(req.Response.Header["Location"], " "))
+		// service.Alert("redirect", strings.Join(req.Response.Header["Location"], " "))
 		return nil
 	}
 
@@ -157,7 +157,7 @@ func crawlWeb(web model.Web, collection *mongo.Collection) {
 	})
 
 	c.OnError(func(r *colly.Response, err error) {
-		fmt.Println("visit url: ", r.Request.URL, "failed.", string(r.Body), " error:", err)
+		fmt.Println("visit url: ", r.Request.URL, "failed. error:", err)
 		web.Visited[r.Request.URL.String()] = false
 	})
 
